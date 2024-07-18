@@ -40,69 +40,106 @@
   Testing the server - run `npm run test-todoServer` command in terminal
  */
   const express = require('express');
+  const fs = require('fs');
   const app = express();
   
   app.use(express.json());
 
-  let todos = [];
   
   app.get('/todos', (req, res)=> {
-    res.json(todos);
-  })
+    fs.readFile('todos.json', 'utf8', (err, data) => {
+      if (err) {
+          res.status(404).send('File not found');
+          throw err;
+      }
+      res.json(JSON.parse(data));
+    });
+  });
   
   app.get('/todos/:id', (req, res) => {
     const id = Number(req.params.id);
-    const todo = todos.find(todo => todo.id === id);
-    if(todo) {
-      res.json(todo);
-    }
-    else {
-      res.status(404).end();
-    }
-  })
+    fs.readFile('todos.json', 'utf8', (err, data) => {
+      if (err) {
+          res.status(404).send('File not found');
+          throw err;
+      }
+      const todos =JSON.parse(data);
+      const todo = todos.find(todo => todo.id === id);
+      if(todo) {
+        res.json(todo);
+      }
+      else {
+        res.status(404).end();
+      }
+    });
+});
 
   app.post('/todos', (req, res) => {
-    //console.log(req.body);
     const body = req.body;
-    const todo = {
-      id: todos.length+1,
-      title: body.title,
-      //completed: body.completed,
-      description: body.description,
-    }
-    todos = todos.concat(todo);
-    //console.log(todos)
-    res.status(201).json(todo);
+    fs.readFile('todos.json', 'utf8', (err, data) => {
+      if (err) {
+          res.status(404).send('File not found');
+          throw err;
+      }
+      let todos = JSON.parse(data);
+      const todo = {
+        id: todos.length+1,
+        title: body.title,
+        description: body.description,
+      }
+      todos = todos.concat(todo);
+      fs.writeFile('todos.json', JSON.stringify(todos), (err) => {
+        if (err) throw err;
+        res.status(201).json(todo);
+      }); 
+    });
   })
 
   app.put('/todos/:id', (req, res) => {
     const id = Number(req.params.id);
-    let todo = todos.find(todo => todo.id === id);
-    if(todo) {
-      todo = {...todo, ...req.body};
-      //console.log(todo);
-      todos = todos.filter(todo => todo.id !== id);
-      todos = todos.concat(todo);
-      res.json(todo);
-    }
-    else {
-      res.status(404).end();
-    }
+    fs.readFile('todos.json', 'utf8', (err, data) => {
+      if (err) {
+          res.status(404).send('File not found');
+          throw err;
+      }
+      let todos = JSON.parse(data);
+      let todo = todos.find(todo => todo.id === id);
+      if(todo) {
+        todo = {...todo, ...req.body};
+        todos = todos.filter(todo => todo.id !== id);
+        todos = todos.concat(todo);
+        fs.writeFile('todos.json', JSON.stringify(todos), (err) => {
+          if (err) throw err;
+          res.status(200).json(todo);
+        }); 
+      }
+      else {
+        res.status(404).end();
+      }
+    });
   })
 
   app.delete('/todos/:id', (req, res) => {
     const id = Number(req.params.id);
-    // console.log(req.params.id)
-    // console.log(todos)
-    todo = todos.find(todo => todo.id === id);
-    if(todo){
-      todos = todos.filter(todo => todo.id !== id);
-      res.status(200).end();
-    }
-    else {
-      res.status(404).end();
-    }
-  })
+    fs.readFile('todos.json', 'utf8', (err, data) => {
+      if (err) {
+          res.status(404).send('File not found');
+          throw err;
+      }
+      let todos = JSON.parse(data);
+      let todo = todos.find(todo => todo.id === id);
+      if(todo) {
+        todos = todos.filter(todo => todo.id !== id);
+        fs.writeFile('todos.json', JSON.stringify(todos), (err) => {
+          if (err) throw err;
+          res.status(200).json(todo);
+        }); 
+      }
+      else {
+        res.status(404).end();
+      }
+    });
+  });
 
   app.use((req, res, next) => {
     res.status(404).send();
